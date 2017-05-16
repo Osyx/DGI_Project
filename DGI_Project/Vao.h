@@ -7,7 +7,7 @@
 class Vao {
 	const int BYTES_PER_FLOAT = 4;
 	const int BYTES_PER_INT = 4;
-	std::vector<Vbo> sataVbos;
+	std::vector<Vbo> dataVbos;
 public:
 	const int id;
 } vao;
