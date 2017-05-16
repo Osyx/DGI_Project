@@ -13,5 +13,121 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Animation">
+      <UniqueIdentifier>{2e65e6ca-e9d8-44b9-ab81-428606ab6606}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Animation\animatedModel">
+      <UniqueIdentifier>{6561fafe-e659-438e-ad86-6111c094296f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Animation\animation">
+      <UniqueIdentifier>{af922bd8-c45d-4aa3-94b6-be23ca07f6e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Animation\loaders">
+      <UniqueIdentifier>{5d6ca6c0-aeda-454b-8be4-ba65693c8c48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Animation\renderer">
+      <UniqueIdentifier>{d257ad97-b77e-46fe-8f7f-d9ca4bf8c088}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ColladaParser">
+      <UniqueIdentifier>{069ca42b-57e8-4d19-af58-c9e2cbe2d1f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ColladaParser\colladaLoader">
+      <UniqueIdentifier>{ea1874fc-7225-41ea-a444-80e144d9d00d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ColladaParser\dataStructures">
+      <UniqueIdentifier>{9e5eb335-f883-4511-917e-c7c5fa8cf1ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ColladaParser\xmlParser">
+      <UniqueIdentifier>{af4de201-ccbf-4ef5-a879-a1dcc0439a71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine">
+      <UniqueIdentifier>{d373c83c-b08c-4a31-809f-74523cf120ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Resources">
+      <UniqueIdentifier>{7523610c-4972-4638-a9c0-68f1664deb23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\openglObjects">
+      <UniqueIdentifier>{37be08a2-532f-40c8-98ac-97b56ee39362}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\renderEngine">
+      <UniqueIdentifier>{d7a967f7-5901-481f-9862-9569339502aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\scene">
+      <UniqueIdentifier>{c9a2b99d-3483-4cbd-8a6b-16f794bc5fcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\shaders">
+      <UniqueIdentifier>{99b054bc-5212-48af-916a-b0f14d37d7d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\skybox">
+      <UniqueIdentifier>{c2fea252-5817-482a-b7a4-b65ecd4b1d26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\textures">
+      <UniqueIdentifier>{7bfea951-12dc-4d78-989e-e88fcc2c87d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\utils">
+      <UniqueIdentifier>{68f4424f-5a39-4226-88d3-08bf47bd4086}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Resources\res">
+      <UniqueIdentifier>{6ac8492d-27fb-4295-a5dc-02757a7d7d8e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneralSettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimatedModel.cpp">
+      <Filter>Source Files\Animation\animatedModel</Filter>
+    </ClCompile>
+    <ClCompile Include="Matrices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Joint.cpp">
+      <Filter>Source Files\Animation\animatedModel</Filter>
+    </ClCompile>
+    <ClCompile Include="Vao.cpp">
+      <Filter>Source Files\Engine\openglObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="Vbo.cpp">
+      <Filter>Source Files\Engine\openglObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="Joint.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="diffuse.png">
+      <Filter>Source Files\Resources\res</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="model.dae">
+      <Filter>Source Files\Resources\res</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Matrices.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vectors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vao.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vbo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\glext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
