@@ -121,13 +121,13 @@ void updateValues() {
 		bool rightStop = false;
 		bool leftStop = false;
 		bool success = false;
-		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, 3);
-		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, 3);
+		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, limbSize);
+		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, limbSize);
 		while (true) {
 			if(!leftStop)
-				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, 3);
+				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, limbSize);
 			if(!rightStop)
-				rightResult = calcCCD(rightResult.bones, mouseX, mouseY, 3);
+				rightResult = calcCCD(rightResult.bones, mouseX, mouseY, limbSize);
 			if (leftResult.result == Result::Failure)
 				leftStop = true;
 			if (rightResult.result == Result::Failure)
@@ -333,7 +333,6 @@ float degToRad(float deg) {
 	return deg * M_PI / 180;
 }
 
-// Will change in the future, atm not finished code but just a port.
 static VectorResult calcCCD(
 	std::vector<Bone> bones,	// Bone values to update
 	float targetX,              // Target x position for the end effector
@@ -342,19 +341,17 @@ static VectorResult calcCCD(
 ) {
 	
 	// Set an epsilon value to prevent division by small numbers.
-	const float epsilon = 0.0001;
+	const float epsilon = 0.001;
 
-	// Set max arc length a bone can move the end effector an be considered no motion
-	// so that we can detect a failure state.
-	//const float trivialArcLength = 0.00001;
-	const float trivialArcLength = 0.0001;
+	// Set max arc length a bone can move the end effector and it can be considered no motion.
+	// So that we can detect a failure state.
+	const float trivialArcLength = 0.00001;
 
 	int numBones = bones.size();
 	if (!(numBones > 0))
 		return VectorResult(Result::Failure);
 	float arrivalDistSqr = arrivalDist * arrivalDist;
 
-	//===
 	// Generate the world space bone data.
 	std::vector<Bone_Calc> worldBones;
 
