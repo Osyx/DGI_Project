@@ -93,7 +93,7 @@ int  main() {
 	glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 	glutInitWindowPosition(500, 500);
 	glutCreateWindow("Figure");
-	glutMotionFunc(mouse);
+	glutPassiveMotionFunc(mouse);
 	glutDisplayFunc(drawFigure);
 	//glutIdleFunc(drawFigure);
 	glutKeyboardFunc(keyboard);
@@ -118,48 +118,55 @@ void updateValues() {
 		armLength = limbSize * 10.0f;
 		legLength = armLength;
 		int loops = 0;
+		bool rightStop = false;
+		bool leftStop = false;
+		bool success = false;
 		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, 3);
-		while (true) {
-			leftResult = calcCCD(leftResult.bones, mouseX, mouseY, 3);
-			if (leftResult.result == Result::Failure) {
-				break;
-			}
-			if (leftResult.result == Result::Success) {
-				leftArm = leftResult.bones;
-				break;
-			}
-			glutPostRedisplay();
-			if (loops++ == 50)
-				break;
-		}
-		loops = 0;
 		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, 3);
 		while (true) {
-			rightResult = calcCCD(rightResult.bones, mouseX, mouseY, 3);
-			if (rightResult.result == Result::Failure) {
-				break;
+			if(!leftStop)
+				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, 3);
+			if(!rightStop)
+				rightResult = calcCCD(rightResult.bones, mouseX, mouseY, 3);
+			if (leftResult.result == Result::Failure)
+				leftStop = true;
+			if (rightResult.result == Result::Failure)
+				rightStop = true;
+			if (leftResult.result == Result::Success && !leftStop) {
+				leftArm = leftResult.bones;
+				std::cout << "SUCCESS left!" << std::endl;
+				if (success)
+					break;
+				success = true;
+				leftStop = true;
+
 			}
-			if (rightResult.result == Result::Success) {
+			if (rightResult.result == Result::Success && !rightStop) {
 				rightArm = rightResult.bones;
-				break;
+				std::cout << "SUCCESS right!" << std::endl;
+				if(success)
+					break;
+				success = true;
+				rightStop = true;
 			}
 			glutPostRedisplay();
-			if (loops++ == 50)
+			if (loops++ == 5000 || (leftStop && rightStop))
 				break;
 		}
-		if (leftResult.result != Result::Failure) {
-			for (int i = 0; i < leftResult.bones.size(); ++i) {
-				float angle = leftResult.bones[i].angle;
-				glm::vec2 newLeft = glm::mat2(glm::vec2(cos(angle), -sin(angle)), glm::vec2(sin(angle), cos(angle))) * glm::vec2(leftResult.bones[i].x, leftResult.bones[i].y);
+		std::cout << leftResult.bones.size() << " " << rightResult.bones.size() << std::endl;
+		for (int i = 0; i < std::max(leftResult.bones.size(), rightResult.bones.size()); ++i) {
+			if (leftResult.bones.size() > 0 && leftResult.result != Result::Failure) {
+				std::cout << "left:" << leftResult.bones.size() << std::endl;
+				float lAngle = leftResult.bones[i].angle;
+				glm::vec2 newLeft = glm::mat2(glm::vec2(cos(lAngle), -sin(lAngle)), glm::vec2(sin(lAngle), cos(lAngle))) * glm::vec2(leftResult.bones[i].x, leftResult.bones[i].y);
 				leftArm[i].x = newLeft.x;
 				leftArm[i].y = newLeft.y;
 				leftArm[i].angle = 0;
 			}
-		}
-		if (rightResult.result != Result::Failure) {
-			for (int i = 0; i < rightResult.bones.size(); ++i) {
-				float angle = rightResult.bones[i].angle;
-				glm::vec2 newright = glm::mat2(glm::vec2(cos(angle), -sin(angle)), glm::vec2(sin(angle), cos(angle))) * glm::vec2(rightResult.bones[i].x, rightResult.bones[i].y);
+			if (rightResult.bones.size() > 0 && rightResult.result != Result::Failure) {
+				std::cout << "right:" << rightResult.bones.size() << std::endl;
+				float rAngle = rightResult.bones[i].angle;
+				glm::vec2 newright = glm::mat2(glm::vec2(cos(rAngle), -sin(rAngle)), glm::vec2(sin(rAngle), cos(rAngle))) * glm::vec2(rightResult.bones[i].x, rightResult.bones[i].y);
 				rightArm[i].x = newright.x;
 				rightArm[i].y = newright.y;
 				rightArm[i].angle = 0;
@@ -306,6 +313,7 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 void mouse(int x, int y) {
+	std::cout << "x: " << x << " y: " << y << std::endl;
 	mouseX = x;
 	mouseY = y;
 	changed = true;
@@ -338,7 +346,8 @@ static VectorResult calcCCD(
 
 	// Set max arc length a bone can move the end effector an be considered no motion
 	// so that we can detect a failure state.
-	const float trivialArcLength = 0.00001;
+	//const float trivialArcLength = 0.00001;
+	const float trivialArcLength = 0.0001;
 
 	int numBones = bones.size();
 	if (!(numBones > 0))
