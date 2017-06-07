@@ -6,11 +6,6 @@
 #include <vector>
 #include <algorithm>
 
-///***************************************************************************************
-/// Bone_Calc
-/// This class is used internally by the calcCCD function to represent a bone in
-/// world space.
-///***************************************************************************************
 class Bone_Calc {
 public:
 	float x;        // x position in world space
@@ -18,23 +13,15 @@ public:
 	float angle;    // angle in world space
 	float cosAngle; // sine of angle
 	float sinAngle; // cosine of angle
+	Bone_Calc() {}
+	Bone_Calc(float _x, float _y, float _angle, float _cosAngle, float _sinAngle) { x = _x; y = _y; angle = _angle; cosAngle = _cosAngle; sinAngle = _sinAngle; }
 };
 
-///***************************************************************************************
-/// Result
-/// This enum represents the resulting state of a CCD iteration.
-///***************************************************************************************
 enum Result {
 	Success,    // the target was reached
 	Processing, // still trying to reach the target
 	Failure    // failed to reach the target
 };
-
-///***************************************************************************************
-/// Bone
-/// This class is used to supply the CalcIK_2D_CCD function with a bone's representation
-/// relative to its parent in the kinematic chain.
-///***************************************************************************************
 
 class Bone {
 public:
@@ -42,8 +29,17 @@ public:
 	float y;	// y position in parent space
 	float z;	// z position in parent space
 	float angle; // angle in parent space
-	Bone() {}
+	Bone() : x(0), y(0), z(0), angle(999) {}
 	Bone(float _x, float _y, float _z, float _angle) : x(_x), y(_y), z(_z), angle(_angle) {}
+};
+
+class VectorResult {
+public:
+	int result;
+	std::vector<Bone> bones;
+	VectorResult(int _result, std::vector<Bone> _bones) : result(_result), bones(_bones) {}
+	VectorResult(int _result) : result(_result) { std::vector<Bone> emptybones(0); bones = emptybones; }
+	VectorResult() : result(Result::Failure) { std::vector<Bone> emptybones(0); bones = emptybones; }
 };
 
 const int SCREEN_WIDTH = 300;
@@ -58,29 +54,36 @@ float armLength = limbSize * 10.0f;
 float legLength = armLength;
 float mouseX = 0;
 float mouseY = 0;
+bool changed = false;
 
-std::vector<Bone> rightArm(1);
-std::vector<Bone> leftArm(1);
-std::vector<Bone> rightLeg(1);
-std::vector<Bone> leftLeg(1);
+std::vector<Bone> rightArm;
+std::vector<Bone> leftArm;
+std::vector<Bone> rightLeg;
+std::vector<Bone> leftLeg;
 
 void init();
 void updateValues();
 void drawFigure();
 void keyboard(unsigned char, int, int);
 void mouse(int, int);
-static Result calcCCD(std::vector<Bone>, float, float, float);
+static VectorResult calcCCD(std::vector<Bone>, float, float, float);
 float simplifyAngle(float);
 float degToRad(float);
 
+VectorResult testing(VectorResult hej) {
+	std::cout << "Before inside: " << hej.bones[0].angle << std::endl;
+	hej.bones[0].angle = 222;
+	std::cout << "After inside: " << hej.bones[0].angle << std::endl;
+	return hej;
+}
+
 int  main() {
 
-	Bone upperLeftArm(armLength, 0.0f, 0.0f, degToRad(90.0f));
-	Bone lowerLeftArm(armLength, 0.0f, 0.0f, degToRad(0.0f));
+	Bone upperLeftArm(armLength, 0.0f, 0.0f, 0.0f);
+	Bone lowerLeftArm(armLength, 0.0f, 0.0f, 0.0f);
 
-	Bone upperRightArm(-armLength, 0.0f, 0.0f, degToRad(90.0f));
-	Bone lowerRightArm(-armLength, 0.0f, 0.0f, degToRad(0.0f));
-
+	Bone upperRightArm(-armLength, 0.0f, 0.0f, 0.0f);
+	Bone lowerRightArm(-armLength, 0.0f, 0.0f, 0.0f);
 	leftArm.push_back(upperLeftArm);
 	leftArm.push_back(lowerLeftArm);
 	rightArm.push_back(upperRightArm);
@@ -90,6 +93,7 @@ int  main() {
 	glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 	glutInitWindowPosition(500, 500);
 	glutCreateWindow("Figure");
+	glutMotionFunc(mouse);
 	glutDisplayFunc(drawFigure);
 	//glutIdleFunc(drawFigure);
 	glutKeyboardFunc(keyboard);
@@ -109,25 +113,59 @@ void init() {
 }
 
 void updateValues() {
-	limbSize = bodyHeight / 100.0f * 7.0f;
-	armLength = limbSize * 10.0f;
-	legLength = armLength;
-	glutMotionFunc(mouse);
-	std::cout << "x: " << mouseX << "y: " << mouseY << std::endl;
-	int loops = 0;
-	while (calcCCD(leftArm, mouseX, mouseY, 3) == Result::Processing) {
-		glutPostRedisplay();
-		if (loops++ == 3)
-			break;
-	}
-	for (int i = 0; i < leftArm.size() - 1; ++i) {
-		float angle = leftArm[i].angle;
-		if (i == 1)
-			std::cout << angle << std::endl;
-		glm::vec2 newLeft = glm::mat2(glm::vec2(cos(angle), -sin(angle)), glm::vec2(sin(angle), cos(angle))) * glm::vec2(leftArm[i].x, leftArm[i].y);
-		leftArm[i].x = newLeft.x;
-		leftArm[i].y = newLeft.y;
-		std::cout << "Loop" << std::endl;
+	if (changed) {
+		limbSize = bodyHeight / 100.0f * 7.0f;
+		armLength = limbSize * 10.0f;
+		legLength = armLength;
+		int loops = 0;
+		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, 3);
+		while (true) {
+			leftResult = calcCCD(leftResult.bones, mouseX, mouseY, 3);
+			if (leftResult.result == Result::Failure) {
+				break;
+			}
+			if (leftResult.result == Result::Success) {
+				leftArm = leftResult.bones;
+				break;
+			}
+			glutPostRedisplay();
+			if (loops++ == 50)
+				break;
+		}
+		loops = 0;
+		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, 3);
+		while (true) {
+			rightResult = calcCCD(rightResult.bones, mouseX, mouseY, 3);
+			if (rightResult.result == Result::Failure) {
+				break;
+			}
+			if (rightResult.result == Result::Success) {
+				rightArm = rightResult.bones;
+				break;
+			}
+			glutPostRedisplay();
+			if (loops++ == 50)
+				break;
+		}
+		if (leftResult.result != Result::Failure) {
+			for (int i = 0; i < leftResult.bones.size(); ++i) {
+				float angle = leftResult.bones[i].angle;
+				glm::vec2 newLeft = glm::mat2(glm::vec2(cos(angle), -sin(angle)), glm::vec2(sin(angle), cos(angle))) * glm::vec2(leftResult.bones[i].x, leftResult.bones[i].y);
+				leftArm[i].x = newLeft.x;
+				leftArm[i].y = newLeft.y;
+				leftArm[i].angle = 0;
+			}
+		}
+		if (rightResult.result != Result::Failure) {
+			for (int i = 0; i < rightResult.bones.size(); ++i) {
+				float angle = rightResult.bones[i].angle;
+				glm::vec2 newright = glm::mat2(glm::vec2(cos(angle), -sin(angle)), glm::vec2(sin(angle), cos(angle))) * glm::vec2(rightResult.bones[i].x, rightResult.bones[i].y);
+				rightArm[i].x = newright.x;
+				rightArm[i].y = newright.y;
+				rightArm[i].angle = 0;
+			}
+		}
+		changed = false;
 	}
 	
 }
@@ -163,10 +201,9 @@ void drawFigure() {
 	glPushMatrix();
 	glTranslatef(0, bodyHeight - limbSize, 0);
 	glLineWidth(limbSize);
-	glColor3f(0.0, 1.0, 0.0);
+	glColor3f(1.0, 1.0, 0.0);
 	glBegin(GL_LINES);
 	glVertex3f(0.0, 0.0, 0.0);
-	std::cout << "x: " << leftArm[0].x << " y: " << leftArm[0].y << " z: " << leftArm[0].z << std::endl;
 	glVertex3f(leftArm[0].x, leftArm[0].y, leftArm[0].z);
 	glEnd();
 	glPushMatrix();
@@ -180,7 +217,7 @@ void drawFigure() {
 	glPopMatrix();
 
 	glLineWidth(limbSize);
-	glColor3f(0.0, 1.0, 0.0);
+	glColor3f(1.0, 1.0, 0.0);
 	glBegin(GL_LINES);
 	glVertex3f(0.0, 0.0, 0.0);
 	glVertex3f(rightArm[0].x, rightArm[0].y, rightArm[0].z);
@@ -271,12 +308,10 @@ void keyboard(unsigned char key, int x, int y) {
 void mouse(int x, int y) {
 	mouseX = x;
 	mouseY = y;
+	changed = true;
+	drawFigure();
 }
 
-///***************************************************************************************
-/// SimplifyAngle
-/// This function will convert an angle to the equivalent rotation in the range [-pi,pi]
-///***************************************************************************************
 float simplifyAngle(float angle) {
 	angle = fmod(angle, (2.0 * M_PI));
 	if (angle < -M_PI)
@@ -290,21 +325,8 @@ float degToRad(float deg) {
 	return deg * M_PI / 180;
 }
 
-///***************************************************************************************
-/// CalcIK_2D_CCD
-/// Given a bone chain located at the origin, this function will perform a single cyclic
-/// coordinate descent (CCD) iteration. This finds a solution of bone angles that places
-/// the final bone in the given chain at a target position. The supplied bone angles are
-/// used to prime the CCD iteration. If a valid solution does not exist, the angles will
-/// move as close to the target as possible. The user should resupply the updated angles 
-/// until a valid solution is found (or until an iteration limit is met).
-///  
-/// returns: Result.Success when a valid solution was found.
-///          Result.Processing when still searching for a valid solution.
-///          Result.Failure when it can get no closer to the target.
-///***************************************************************************************
-
-static Result calcCCD(
+// Will change in the future, atm not finished code but just a port.
+static VectorResult calcCCD(
 	std::vector<Bone> bones,	// Bone values to update
 	float targetX,              // Target x position for the end effector
 	float targetY,              // Target y position for the end effector
@@ -319,8 +341,8 @@ static Result calcCCD(
 	const float trivialArcLength = 0.00001;
 
 	int numBones = bones.size();
-	if(!(numBones > 0))
-		return Result::Failure;
+	if (!(numBones > 0))
+		return VectorResult(Result::Failure);
 	float arrivalDistSqr = arrivalDist * arrivalDist;
 
 	//===
@@ -328,29 +350,17 @@ static Result calcCCD(
 	std::vector<Bone_Calc> worldBones;
 
 	// Start with the root bone.
-	Bone_Calc rootWorldBone;
-	rootWorldBone.x = bones[0].x;
-	rootWorldBone.y = bones[0].y;
-	rootWorldBone.angle = bones[0].angle;
-	rootWorldBone.cosAngle = cos(rootWorldBone.angle);
-	rootWorldBone.sinAngle = sin(rootWorldBone.angle);
+	Bone_Calc rootWorldBone(bones[0].x, bones[0].y, bones[0].angle, cos(bones[0].angle), sin(bones[0].angle));
 	worldBones.push_back(rootWorldBone);
 
 	// Convert child bones to world space.
 	for (int boneIdx = 1; boneIdx < numBones; ++boneIdx) {
 		Bone_Calc prevWorldBone = worldBones[boneIdx - 1];
-		Bone_Calc curLocalBone; 
-		curLocalBone.x = bones[boneIdx].x;
-		curLocalBone.y = bones[boneIdx].y;
-		curLocalBone.angle = bones[boneIdx].angle;
-		curLocalBone.cosAngle = cos(bones[boneIdx].angle);
-		curLocalBone.sinAngle = sin(bones[boneIdx].angle);
+		Bone_Calc curLocalBone(bones[boneIdx].x, bones[boneIdx].y, bones[boneIdx].angle, cos(bones[boneIdx].angle), sin(bones[boneIdx].angle));
 
 		Bone_Calc newWorldBone;
-		newWorldBone.x = prevWorldBone.x + prevWorldBone.cosAngle*curLocalBone.x
-			- prevWorldBone.sinAngle*curLocalBone.y;
-		newWorldBone.y = prevWorldBone.y + prevWorldBone.sinAngle*curLocalBone.x
-			+ prevWorldBone.cosAngle*curLocalBone.y;
+		newWorldBone.x = prevWorldBone.x + prevWorldBone.cosAngle * curLocalBone.x - prevWorldBone.sinAngle * curLocalBone.y;
+		newWorldBone.y = prevWorldBone.y + prevWorldBone.sinAngle * curLocalBone.x + prevWorldBone.cosAngle * curLocalBone.y;
 		newWorldBone.angle = prevWorldBone.angle + curLocalBone.angle;
 		newWorldBone.cosAngle = cos(newWorldBone.angle);
 		newWorldBone.sinAngle = sin(newWorldBone.angle);
@@ -366,7 +376,7 @@ static Result calcCCD(
 	// Perform CCD on the bones by optimizing each bone in a loop
 	// from the final bone to the root bone
 	bool modifiedBones = false;
-	for (int boneIdx = numBones - 2; boneIdx >= 0; --boneIdx) {
+	for (int boneIdx = numBones - 1; boneIdx >= 0; --boneIdx) {
 		// Get the vector from the current bone to the end effector position.
 		float curToEndX = endX - worldBones[boneIdx].x;
 		float curToEndY = endY - worldBones[boneIdx].y;
@@ -401,14 +411,12 @@ static Result calcCCD(
 		// Rotate the current bone in local space (this value is output to the user)
 		bones[boneIdx].angle = simplifyAngle(bones[boneIdx].angle + rotAng);
 
-		std::cout << bones[boneIdx].angle << " " << boneIdx << std::endl;
-
 		// Check for termination
 		float endToTargetX = (targetX - endX);
 		float endToTargetY = (targetY - endY);
 		if (endToTargetX * endToTargetX + endToTargetY * endToTargetY <= arrivalDistSqr) {
 			// We found a valid solution.
-			return Result::Success;
+			return VectorResult(Result::Success, bones);
 		}
 
 		// Track if the arc length that we moved the end effector was
@@ -420,9 +428,9 @@ static Result calcCCD(
 
 	// We failed to find a valid solution during this iteration.
 	if (modifiedBones)
-		return Result::Processing;
+		return VectorResult(Result::Processing, bones);
 	else
-		return Result::Failure;
+		return VectorResult(Result::Failure);
 }
 
 void createBodyStructure(float bodyHeight, float armLength, float legLength) {
