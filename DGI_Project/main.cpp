@@ -124,6 +124,27 @@ void updateValues() {
 		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, limbSize);
 		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, limbSize);
 		while (true) {
+
+			std::cout << leftResult.bones.size() << " " << rightResult.bones.size() << std::endl;
+			for (int i = 0; i < std::max(leftResult.bones.size(), rightResult.bones.size()); ++i) {
+				if (leftResult.bones.size() > 0 && leftResult.result != Result::Failure) {
+					std::cout << "left:" << leftResult.bones.size() << std::endl;
+					float lAngle = leftResult.bones[i].angle;
+					glm::vec2 newLeft = glm::mat2(glm::vec2(cos(lAngle), -sin(lAngle)), glm::vec2(sin(lAngle), cos(lAngle))) * glm::vec2(leftResult.bones[i].x, leftResult.bones[i].y);
+					leftArm[i].x = newLeft.x;
+					leftArm[i].y = newLeft.y;
+					leftArm[i].angle = 0;
+				}
+				if (rightResult.bones.size() > 0 && rightResult.result != Result::Failure) {
+					std::cout << "right:" << rightResult.bones.size() << std::endl;
+					float rAngle = rightResult.bones[i].angle;
+					glm::vec2 newright = glm::mat2(glm::vec2(cos(rAngle), -sin(rAngle)), glm::vec2(sin(rAngle), cos(rAngle))) * glm::vec2(rightResult.bones[i].x, rightResult.bones[i].y);
+					rightArm[i].x = newright.x;
+					rightArm[i].y = newright.y;
+					rightArm[i].angle = 0;
+				}
+			}
+
 			if(!leftStop)
 				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, limbSize);
 			if(!rightStop)
@@ -153,6 +174,7 @@ void updateValues() {
 			if (loops++ == 5000 || (leftStop && rightStop))
 				break;
 		}
+		/*
 		std::cout << leftResult.bones.size() << " " << rightResult.bones.size() << std::endl;
 		for (int i = 0; i < std::max(leftResult.bones.size(), rightResult.bones.size()); ++i) {
 			if (leftResult.bones.size() > 0 && leftResult.result != Result::Failure) {
@@ -172,6 +194,7 @@ void updateValues() {
 				rightArm[i].angle = 0;
 			}
 		}
+		*/
 		changed = false;
 	}
 	
