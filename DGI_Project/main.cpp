@@ -3,6 +3,7 @@
 #include <iostream>
 #include <GL/glut.h>
 #include <glm\glm\glm.hpp>
+#include <glm\glm\gtc\matrix_transform.hpp>
 #include <vector>
 #include <algorithm>
 
@@ -66,24 +67,20 @@ void updateValues();
 void drawFigure();
 void keyboard(unsigned char, int, int);
 void mouse(int, int);
+void drawMouseDot();
 static VectorResult calcCCD(std::vector<Bone>, float, float, float);
 float simplifyAngle(float);
 float degToRad(float);
-
-VectorResult testing(VectorResult hej) {
-	std::cout << "Before inside: " << hej.bones[0].angle << std::endl;
-	hej.bones[0].angle = 222;
-	std::cout << "After inside: " << hej.bones[0].angle << std::endl;
-	return hej;
-}
+float radToDeg(float);
+glm::vec2 rotateVector(Bone);
 
 int  main() {
 
 	Bone upperLeftArm(armLength, 0.0f, 0.0f, 0.0f);
-	Bone lowerLeftArm(armLength, 0.0f, 0.0f, 0.0f);
+	Bone lowerLeftArm(armLength, 0.0f, 0.0f, degToRad(90.0f));
 
 	Bone upperRightArm(-armLength, 0.0f, 0.0f, 0.0f);
-	Bone lowerRightArm(-armLength, 0.0f, 0.0f, 0.0f);
+	Bone lowerRightArm(-armLength, 0.0f, 0.0f, degToRad(-90.0f));
 	leftArm.push_back(upperLeftArm);
 	leftArm.push_back(lowerLeftArm);
 	rightArm.push_back(upperRightArm);
@@ -125,7 +122,9 @@ void updateValues() {
 		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, limbSize);
 		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, limbSize);
 		while (true) {
-			std::cout << mouseX << " " << mouseY << std::endl;
+
+			drawMouseDot();
+
 			if(!leftStop)
 				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, limbSize);
 			if(!rightStop)
@@ -200,6 +199,8 @@ void drawFigure() {
 	// Arms
 	glPushMatrix();
 	glTranslatef(0, bodyHeight - limbSize, 0);
+	glRotatef(radToDeg(leftArm[0].angle), 0, 0, 1);
+	std::cout << "Left Up Angle:" << radToDeg(leftArm[0].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 1.0, 0.0);
 	glBegin(GL_LINES);
@@ -208,6 +209,8 @@ void drawFigure() {
 	glEnd();
 	glPushMatrix();
 	glTranslatef(leftArm[0].x, leftArm[0].y, leftArm[0].z);
+	glRotatef(radToDeg(leftArm[1].angle), 0, 0, 1);
+	std::cout << "Left down Angle:" << radToDeg(leftArm[1].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -216,6 +219,8 @@ void drawFigure() {
 	glEnd();
 	glPopMatrix();
 
+	glRotatef(radToDeg(rightArm[0].angle), 0, 0, 1);
+	std::cout << "Right Up Angle:" << radToDeg(rightArm[0].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 1.0, 0.0);
 	glBegin(GL_LINES);
@@ -224,6 +229,8 @@ void drawFigure() {
 	glEnd();
 	glPushMatrix();
 	glTranslatef(rightArm[0].x, rightArm[0].y, rightArm[0].z);
+	glRotatef(radToDeg(rightArm[1].angle), 0, 0, 1);
+	std::cout << "Right down Angle:" << radToDeg(rightArm[1].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -306,11 +313,18 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 void mouse(int x, int y) {
-	std::cout << "x: " << x << " y: " << y << std::endl;
 	mouseX = x;
 	mouseY = y;
 	changed = true;
 	drawFigure();
+}
+
+void drawMouseDot() {
+	glPushMatrix();
+	glTranslatef(mouseX, mouseY, 0);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glutSolidSphere(2, 20, 2);
+	glPopMatrix();
 }
 
 float simplifyAngle(float angle) {
@@ -324,6 +338,10 @@ float simplifyAngle(float angle) {
 
 float degToRad(float deg) {
 	return deg * M_PI / 180;
+}
+
+float radToDeg(float rad) {
+	return rad * 180 / M_PI;
 }
 
 static VectorResult calcCCD(
@@ -409,96 +427,32 @@ static VectorResult calcCCD(
 
 		// Rotate the current bone in local space (this value is output to the user)
 		bones[boneIdx].angle = simplifyAngle(bones[boneIdx].angle + rotAng);
+		std::cout << "Angle:" << radToDeg(bones[boneIdx].angle) << std::endl;
 
 		// Check for termination
 		float endToTargetX = (targetX - endX);
 		float endToTargetY = (targetY - endY);
 		if (endToTargetX * endToTargetX + endToTargetY * endToTargetY <= arrivalDistSqr) {
-			// We found a valid solution.
-			glm::vec2 newLeft = glm::mat2(glm::vec2(cos(bones[boneIdx].angle), -sin(bones[boneIdx].angle)), glm::vec2(sin(bones[boneIdx].angle), cos(bones[boneIdx].angle))) * glm::vec2(bones[boneIdx].x, bones[boneIdx].y);
-			bones[boneIdx].x = newLeft.x;
-			bones[boneIdx].y = newLeft.y;
-			bones[boneIdx].angle = 0;
 			return VectorResult(Result::Success, bones);
 		}
 
 		// Track if the arc length that we moved the end effector was
 		// a nontrivial distance.
-		if (!modifiedBones && abs(rotAng) * curToEndMag > trivialArcLength) {
-
-			glm::vec2 newLeft = glm::mat2(glm::vec2(cos(bones[boneIdx].angle), -sin(bones[boneIdx].angle)), glm::vec2(sin(bones[boneIdx].angle), cos(bones[boneIdx].angle))) * glm::vec2(bones[boneIdx].x, bones[boneIdx].y);
-			bones[boneIdx].x = newLeft.x;
-			bones[boneIdx].y = newLeft.y;
-			bones[boneIdx].angle = 0;
-
+		if (!modifiedBones && abs(rotAng) * curToEndMag > trivialArcLength)
 			modifiedBones = true;
-		}
 	}
 
 	// We failed to find a valid solution during this iteration.
-	if (modifiedBones) {
+	if (modifiedBones)
 		return VectorResult(Result::Processing, bones);
-	} else
+	else
 		return VectorResult(Result::Failure);
 }
 
-void createBodyStructure(float bodyHeight, float armLength, float legLength) {
-	
+glm::vec2 rotateVector(Bone bone) {
+	glm::vec4 rotationPoint(bone.x, bone.y, 0, 1);
+	glm::mat4 trans;
+	trans = glm::rotate(trans, bone.angle, glm::vec3(0.0f, 0.0f, 1.0f));
+	glm::vec4 result = trans * rotationPoint;
+	return glm::vec2(result.x, result.y);
 }
-
-/*
-glBegin(GL_QUADS);
-
-//top
-glColor3f(0.0f, 0.0f, 0.8f);
-glVertex3f(-bodyHeight/2, bodyHeight, -10);
-glVertex3f(bodyHeight/2, bodyHeight, -10);
-glVertex3f(bodyHeight/2, bodyHeight, 10);
-glVertex3f(-bodyHeight/2, bodyHeight, 10);
-
-//bot
-glColor3f(0.0f, 0.0f, 0.8f);
-glVertex3f(-bodyHeight / 2, -bodyHeight, 10);
-glVertex3f(bodyHeight / 2, -bodyHeight, 10);
-glVertex3f(bodyHeight / 2, -bodyHeight, -10);
-glVertex3f(-bodyHeight / 2, -bodyHeight, -10);
-
-//front
-glColor3f(0.0f, 0.8f, 0.8f);
-glVertex3f(-bodyHeight / 2, bodyHeight, 10);
-glVertex3f(bodyHeight / 2, bodyHeight, 10);
-glVertex3f(bodyHeight / 2, -bodyHeight, 10);
-glVertex3f(-bodyHeight / 2, -bodyHeight, 10);
-
-//back
-glColor3f(0.0f, 0.8f, 0.8f);
-glVertex3f(-bodyHeight / 2, -bodyHeight, -10);
-glVertex3f(bodyHeight / 2, -bodyHeight, -10);
-glVertex3f(bodyHeight / 2, bodyHeight, -10);
-glVertex3f(-bodyHeight / 2, bodyHeight, -10);
-
-//left
-glColor3f(0.0f, 0.8f, 0.0f);
-glVertex3f(-bodyHeight / 2, bodyHeight, -10);
-glVertex3f(-bodyHeight / 2, bodyHeight, 10);
-glVertex3f(-bodyHeight / 2, -bodyHeight, 10);
-glVertex3f(-bodyHeight / 2, -bodyHeight, -10);
-
-//right
-glColor3f(0.8f, 0.0f, 0.8f);
-glVertex3f(bodyHeight / 2, bodyHeight, 10);
-glVertex3f(bodyHeight / 2, bodyHeight, -10);
-glVertex3f(bodyHeight / 2, -bodyHeight, -10);
-glVertex3f(bodyHeight / 2, -bodyHeight, 10);
-
-glEnd();
-*/
-/*
-glBegin(GL_POLYGON);
-glColor3f(0.0f, 0.8f, 0.8f);
-glVertex2f(-bodyHeight / 3, bodyHeight);
-glVertex2f(bodyHeight / 3, bodyHeight);
-glVertex2f(bodyHeight / 3, -bodyHeight);
-glVertex2f(-bodyHeight / 3, -bodyHeight);
-glEnd();
-*/
