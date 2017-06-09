@@ -93,7 +93,7 @@ int  main() {
 	glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 	glutInitWindowPosition(500, 500);
 	glutCreateWindow("Figure");
-	glutPassiveMotionFunc(mouse);
+	glutMotionFunc(mouse);
 	glutDisplayFunc(drawFigure);
 	//glutIdleFunc(drawFigure);
 	glutKeyboardFunc(keyboard);
@@ -121,30 +121,11 @@ void updateValues() {
 		bool rightStop = false;
 		bool leftStop = false;
 		bool success = false;
+
 		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, limbSize);
 		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, limbSize);
 		while (true) {
-
-			std::cout << leftResult.bones.size() << " " << rightResult.bones.size() << std::endl;
-			for (int i = 0; i < std::max(leftResult.bones.size(), rightResult.bones.size()); ++i) {
-				if (leftResult.bones.size() > 0 && leftResult.result != Result::Failure) {
-					std::cout << "left:" << leftResult.bones.size() << std::endl;
-					float lAngle = leftResult.bones[i].angle;
-					glm::vec2 newLeft = glm::mat2(glm::vec2(cos(lAngle), -sin(lAngle)), glm::vec2(sin(lAngle), cos(lAngle))) * glm::vec2(leftResult.bones[i].x, leftResult.bones[i].y);
-					leftArm[i].x = newLeft.x;
-					leftArm[i].y = newLeft.y;
-					leftArm[i].angle = 0;
-				}
-				if (rightResult.bones.size() > 0 && rightResult.result != Result::Failure) {
-					std::cout << "right:" << rightResult.bones.size() << std::endl;
-					float rAngle = rightResult.bones[i].angle;
-					glm::vec2 newright = glm::mat2(glm::vec2(cos(rAngle), -sin(rAngle)), glm::vec2(sin(rAngle), cos(rAngle))) * glm::vec2(rightResult.bones[i].x, rightResult.bones[i].y);
-					rightArm[i].x = newright.x;
-					rightArm[i].y = newright.y;
-					rightArm[i].angle = 0;
-				}
-			}
-
+			std::cout << mouseX << " " << mouseY << std::endl;
 			if(!leftStop)
 				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, limbSize);
 			if(!rightStop)
@@ -174,35 +155,24 @@ void updateValues() {
 			if (loops++ == 5000 || (leftStop && rightStop))
 				break;
 		}
-		/*
-		std::cout << leftResult.bones.size() << " " << rightResult.bones.size() << std::endl;
-		for (int i = 0; i < std::max(leftResult.bones.size(), rightResult.bones.size()); ++i) {
-			if (leftResult.bones.size() > 0 && leftResult.result != Result::Failure) {
-				std::cout << "left:" << leftResult.bones.size() << std::endl;
-				float lAngle = leftResult.bones[i].angle;
-				glm::vec2 newLeft = glm::mat2(glm::vec2(cos(lAngle), -sin(lAngle)), glm::vec2(sin(lAngle), cos(lAngle))) * glm::vec2(leftResult.bones[i].x, leftResult.bones[i].y);
-				leftArm[i].x = newLeft.x;
-				leftArm[i].y = newLeft.y;
-				leftArm[i].angle = 0;
-			}
-			if (rightResult.bones.size() > 0 && rightResult.result != Result::Failure) {
-				std::cout << "right:" << rightResult.bones.size() << std::endl;
-				float rAngle = rightResult.bones[i].angle;
-				glm::vec2 newright = glm::mat2(glm::vec2(cos(rAngle), -sin(rAngle)), glm::vec2(sin(rAngle), cos(rAngle))) * glm::vec2(rightResult.bones[i].x, rightResult.bones[i].y);
-				rightArm[i].x = newright.x;
-				rightArm[i].y = newright.y;
-				rightArm[i].angle = 0;
-			}
-		}
-		*/
 		changed = false;
+		if (rightResult.result != Result::Failure)
+			rightArm = rightResult.bones;
+		if (leftResult.result != Result::Failure)
+			leftArm = leftResult.bones;
 	}
-	
 }
 
 void drawFigure() {
 
 	init();
+
+	glPushMatrix();
+	glTranslatef(mouseX, -mouseY, 0);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glutSolidSphere(2, 20, 2);
+	glPopMatrix();
+
 	updateValues();
 	gluLookAt(camera.x, camera.y, camera.z, lookat.x, lookat.y, lookat.z, 0, 1, 0);
 	glPushMatrix();
@@ -445,20 +415,30 @@ static VectorResult calcCCD(
 		float endToTargetY = (targetY - endY);
 		if (endToTargetX * endToTargetX + endToTargetY * endToTargetY <= arrivalDistSqr) {
 			// We found a valid solution.
+			glm::vec2 newLeft = glm::mat2(glm::vec2(cos(bones[boneIdx].angle), -sin(bones[boneIdx].angle)), glm::vec2(sin(bones[boneIdx].angle), cos(bones[boneIdx].angle))) * glm::vec2(bones[boneIdx].x, bones[boneIdx].y);
+			bones[boneIdx].x = newLeft.x;
+			bones[boneIdx].y = newLeft.y;
+			bones[boneIdx].angle = 0;
 			return VectorResult(Result::Success, bones);
 		}
 
 		// Track if the arc length that we moved the end effector was
 		// a nontrivial distance.
 		if (!modifiedBones && abs(rotAng) * curToEndMag > trivialArcLength) {
+
+			glm::vec2 newLeft = glm::mat2(glm::vec2(cos(bones[boneIdx].angle), -sin(bones[boneIdx].angle)), glm::vec2(sin(bones[boneIdx].angle), cos(bones[boneIdx].angle))) * glm::vec2(bones[boneIdx].x, bones[boneIdx].y);
+			bones[boneIdx].x = newLeft.x;
+			bones[boneIdx].y = newLeft.y;
+			bones[boneIdx].angle = 0;
+
 			modifiedBones = true;
 		}
 	}
 
 	// We failed to find a valid solution during this iteration.
-	if (modifiedBones)
+	if (modifiedBones) {
 		return VectorResult(Result::Processing, bones);
-	else
+	} else
 		return VectorResult(Result::Failure);
 }
 
