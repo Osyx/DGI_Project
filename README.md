@@ -1,0 +1,1 @@
+![Image of figure.](tree/master/DGI_Project/DGI_Project/img2.png)
