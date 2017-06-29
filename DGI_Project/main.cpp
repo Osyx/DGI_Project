@@ -7,23 +7,6 @@
 #include <vector>
 #include <algorithm>
 
-class Bone_Calc {
-public:
-	float x;        // x position in world space
-	float y;        // y position in world space
-	float angle;    // angle in world space
-	float cosAngle; // sine of angle
-	float sinAngle; // cosine of angle
-	Bone_Calc() {}
-	Bone_Calc(float _x, float _y, float _angle, float _cosAngle, float _sinAngle) { x = _x; y = _y; angle = _angle; cosAngle = _cosAngle; sinAngle = _sinAngle; }
-};
-
-enum Result {
-	Success,    // the target was reached
-	Processing, // still trying to reach the target
-	Failure    // failed to reach the target
-};
-
 class Bone {
 public:
 	float x;	// x position in parent space
@@ -34,13 +17,30 @@ public:
 	Bone(float _x, float _y, float _z, float _angle) : x(_x), y(_y), z(_z), angle(_angle) {}
 };
 
-class VectorResult {
+class BoneCalc {
+public:
+	float x;        // x position in world space
+	float y;        // y position in world space
+	float angle;    // angle in world space
+	float cosAngle; // sine of angle
+	float sinAngle; // cosine of angle
+	BoneCalc() {}
+	BoneCalc(Bone bone) { x = bone.x; y = bone.y; angle = bone.angle; cosAngle = cos(bone.angle); sinAngle = sin(bone.angle); }
+};
+
+enum Result {
+	Success,    // the target was reached
+	Processing, // still trying to reach the target
+	Failure    // failed to reach the target
+};
+
+class CCDResult {
 public:
 	int result;
 	std::vector<Bone> bones;
-	VectorResult(int _result, std::vector<Bone> _bones) : result(_result), bones(_bones) {}
-	VectorResult(int _result) : result(_result) { std::vector<Bone> emptybones(0); bones = emptybones; }
-	VectorResult() : result(Result::Failure) { std::vector<Bone> emptybones(0); bones = emptybones; }
+	CCDResult(int _result, std::vector<Bone> _bones) : result(_result), bones(_bones) {}
+	CCDResult(int _result) : result(_result) { std::vector<Bone> emptybones(0); bones = emptybones; }
+	CCDResult() : result(Result::Failure) { std::vector<Bone> emptybones(0); bones = emptybones; }
 };
 
 const int SCREEN_WIDTH = 300;
@@ -53,8 +53,7 @@ float bodyHeight = 70.0f;
 float limbSize = bodyHeight/100.0f * 7.0f;
 float armLength = limbSize * 10.0f;
 float legLength = armLength;
-float mouseX = 0;
-float mouseY = 0;
+glm::vec2 mousePos(0, 0);
 bool changed = false;
 
 std::vector<Bone> rightArm;
@@ -68,14 +67,13 @@ void drawFigure();
 void keyboard(unsigned char, int, int);
 void mouse(int, int);
 void drawMouseDot();
-static VectorResult calcCCD(std::vector<Bone>, float, float, float);
+static CCDResult calcCCD(std::vector<Bone>, glm::vec2, float);
 float simplifyAngle(float);
 float degToRad(float);
 float radToDeg(float);
 glm::vec2 rotateVector(Bone);
 
 int  main() {
-
 	Bone upperLeftArm(armLength, 0.0f, 0.0f, 0.0f);
 	Bone lowerLeftArm(armLength, 0.0f, 0.0f, degToRad(90.0f));
 
@@ -119,16 +117,13 @@ void updateValues() {
 		bool leftStop = false;
 		bool success = false;
 
-		VectorResult leftResult = calcCCD(leftArm, mouseX, mouseY, limbSize);
-		VectorResult rightResult = calcCCD(rightArm, mouseX, mouseY, limbSize);
+		CCDResult leftResult = calcCCD(leftArm, mousePos, limbSize);
+		CCDResult rightResult = calcCCD(rightArm, mousePos, limbSize);
 		while (true) {
-
-			drawMouseDot();
-
 			if(!leftStop)
-				leftResult = calcCCD(leftResult.bones, mouseX, mouseY, limbSize);
+				leftResult = calcCCD(leftResult.bones, mousePos, limbSize);
 			if(!rightStop)
-				rightResult = calcCCD(rightResult.bones, mouseX, mouseY, limbSize);
+				rightResult = calcCCD(rightResult.bones, mousePos, limbSize);
 			if (leftResult.result == Result::Failure)
 				leftStop = true;
 			if (rightResult.result == Result::Failure)
@@ -165,19 +160,26 @@ void updateValues() {
 void drawFigure() {
 
 	init();
-
-	glPushMatrix();
-	glTranslatef(mouseX, -mouseY, 0);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glutSolidSphere(2, 20, 2);
-	glPopMatrix();
+	drawMouseDot();
 
 	updateValues();
+	/*
+	std::cout << "Left Up Angle:" << radToDeg(leftArm[0].angle) << std::endl;
+	std::cout << "Left down Angle:" << radToDeg(leftArm[1].angle) << std::endl;
+	std::cout << "Right Up Angle:" << radToDeg(rightArm[0].angle) << std::endl;
+	std::cout << "Right down Angle:" << radToDeg(rightArm[1].angle) << std::endl;
+	*/
 	gluLookAt(camera.x, camera.y, camera.z, lookat.x, lookat.y, lookat.z, 0, 1, 0);
 	glPushMatrix();
 
 	// Body
 	glTranslatef(SCREEN_WIDTH / 2 + limbSize / 2, SCREEN_HEIGHT - bodyHeight + legLength, 0);
+
+	glPushMatrix();
+	glTranslatef(SCREEN_WIDTH + 100, SCREEN_HEIGHT + 160, 0);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	glutSolidSphere(10, 20, 2);
+	glPopMatrix();
 
 	glPushMatrix();
 	glTranslatef(0, bodyHeight, 0);
@@ -200,7 +202,6 @@ void drawFigure() {
 	glPushMatrix();
 	glTranslatef(0, bodyHeight - limbSize, 0);
 	glRotatef(radToDeg(leftArm[0].angle), 0, 0, 1);
-	std::cout << "Left Up Angle:" << radToDeg(leftArm[0].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 1.0, 0.0);
 	glBegin(GL_LINES);
@@ -210,7 +211,6 @@ void drawFigure() {
 	glPushMatrix();
 	glTranslatef(leftArm[0].x, leftArm[0].y, leftArm[0].z);
 	glRotatef(radToDeg(leftArm[1].angle), 0, 0, 1);
-	std::cout << "Left down Angle:" << radToDeg(leftArm[1].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -220,7 +220,6 @@ void drawFigure() {
 	glPopMatrix();
 
 	glRotatef(radToDeg(rightArm[0].angle), 0, 0, 1);
-	std::cout << "Right Up Angle:" << radToDeg(rightArm[0].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 1.0, 0.0);
 	glBegin(GL_LINES);
@@ -230,7 +229,6 @@ void drawFigure() {
 	glPushMatrix();
 	glTranslatef(rightArm[0].x, rightArm[0].y, rightArm[0].z);
 	glRotatef(radToDeg(rightArm[1].angle), 0, 0, 1);
-	std::cout << "Right down Angle:" << radToDeg(rightArm[1].angle) << std::endl;
 	glLineWidth(limbSize);
 	glColor3f(1.0, 0.0, 0.0);
 	glBegin(GL_LINES);
@@ -313,15 +311,22 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 void mouse(int x, int y) {
-	mouseX = x;
-	mouseY = y;
+	mousePos.x = x;
+	mousePos.y = SCREEN_HEIGHT - y;
+	std::cout << mousePos.x << " " << mousePos.y << std::endl;
 	changed = true;
 	drawFigure();
 }
 
+Bone worldSpacePos(Bone bone) {
+	bone.x = bone.x + SCREEN_WIDTH / 2 + limbSize / 2;
+	bone.y = -bone.y + SCREEN_HEIGHT - bodyHeight + legLength;
+	return bone;
+}
+
 void drawMouseDot() {
 	glPushMatrix();
-	glTranslatef(mouseX, mouseY, 0);
+	glTranslatef(mousePos.x, mousePos.y, 0);
 	glColor3f(1.0f, 1.0f, 1.0f);
 	glutSolidSphere(2, 20, 2);
 	glPopMatrix();
@@ -344,10 +349,9 @@ float radToDeg(float rad) {
 	return rad * 180 / M_PI;
 }
 
-static VectorResult calcCCD(
+static CCDResult calcCCD(
 	std::vector<Bone> bones,	// Bone values to update
-	float targetX,              // Target x position for the end effector
-	float targetY,              // Target y position for the end effector
+	glm::vec2 target,              // Target y position for the end effector
 	float arrivalDist           // Must get within this range of the target
 ) {
 	
@@ -355,27 +359,30 @@ static VectorResult calcCCD(
 	const float epsilon = 0.001;
 
 	// Set max arc length a bone can move the end effector and it can be considered no motion.
-	// So that we can detect a failure state.
+	// This so that we can detect a failure state.
 	const float trivialArcLength = 0.00001;
 
+	// If there are no bones, return failure.
 	int numBones = bones.size();
 	if (!(numBones > 0))
-		return VectorResult(Result::Failure);
+		return CCDResult(Result::Failure);
+
+	// The square area distance within we much reach for it to be considered a solution. 
 	float arrivalDistSqr = arrivalDist * arrivalDist;
 
-	// Generate the world space bone data.
-	std::vector<Bone_Calc> worldBones;
+	// Generate the world space bone data (wsbd).
+	std::vector<BoneCalc> worldBones;
 
-	// Start with the root bone.
-	Bone_Calc rootWorldBone(bones[0].x, bones[0].y, bones[0].angle, cos(bones[0].angle), sin(bones[0].angle));
+	// Start with the root bone and add it to the wsbd.
+	BoneCalc rootWorldBone(worldSpacePos(bones[0]));
 	worldBones.push_back(rootWorldBone);
 
 	// Convert child bones to world space.
 	for (int boneIdx = 1; boneIdx < numBones; ++boneIdx) {
-		Bone_Calc prevWorldBone = worldBones[boneIdx - 1];
-		Bone_Calc curLocalBone(bones[boneIdx].x, bones[boneIdx].y, bones[boneIdx].angle, cos(bones[boneIdx].angle), sin(bones[boneIdx].angle));
+		BoneCalc prevWorldBone = worldBones[boneIdx - 1];
+		BoneCalc curLocalBone(worldSpacePos(bones[boneIdx]));
 
-		Bone_Calc newWorldBone;
+		BoneCalc newWorldBone;
 		newWorldBone.x = prevWorldBone.x + prevWorldBone.cosAngle * curLocalBone.x - prevWorldBone.sinAngle * curLocalBone.y;
 		newWorldBone.y = prevWorldBone.y + prevWorldBone.sinAngle * curLocalBone.x + prevWorldBone.cosAngle * curLocalBone.y;
 		newWorldBone.angle = prevWorldBone.angle + curLocalBone.angle;
@@ -384,35 +391,27 @@ static VectorResult calcCCD(
 		worldBones.push_back(newWorldBone);
 	}
 
-	//===
 	// Track the end effector position (the final bone)
-	double endX = worldBones[numBones - 1].x;
-	double endY = worldBones[numBones - 1].y;
+	glm::vec2 endPos(worldBones[numBones].x, worldBones[numBones].y);
 
-	//===
 	// Perform CCD on the bones by optimizing each bone in a loop
 	// from the final bone to the root bone
 	bool modifiedBones = false;
 	for (int boneIdx = numBones - 1; boneIdx >= 0; --boneIdx) {
 		// Get the vector from the current bone to the end effector position.
-		float curToEndX = endX - worldBones[boneIdx].x;
-		float curToEndY = endY - worldBones[boneIdx].y;
-		float curToEndMag = sqrt(curToEndX * curToEndX + curToEndY * curToEndY);
+		glm::vec2 curToEnd(endPos.x - worldBones[boneIdx].x, endPos.y - worldBones[boneIdx].y);
+		float curToEndMag = sqrt(curToEnd.x * curToEnd.x + curToEnd.y * curToEnd.y);
 
 		// Get the vector from the current bone to the target position.
-		float curToTargetX = targetX - worldBones[boneIdx].x;
-		float curToTargetY = targetY - worldBones[boneIdx].y;
-		float curToTargetMag = sqrt(curToTargetX * curToTargetX + curToTargetY * curToTargetY);
+		glm::vec2 curToTarget(target.x - worldBones[boneIdx].x, target.y - worldBones[boneIdx].y);
+		float curToTargetMag = sqrt(std::pow(curToTarget.x, 2) + std::pow(curToTarget.y, 2));
 
 		// Get rotation to place the end effector on the line from the current
 		// joint position to the target postion.
-		float cosRotAng, sinRotAng, endTargetMag = (curToEndMag * curToTargetMag);
-		if (endTargetMag <= epsilon) {
-			cosRotAng = 1;
-			sinRotAng = 0;
-		} else {
-			cosRotAng = (curToEndX * curToTargetX + curToEndY * curToTargetY) / endTargetMag;
-			sinRotAng = (curToEndX * curToTargetY - curToEndY * curToTargetX) / endTargetMag;
+		float cosRotAng = 1, sinRotAng = 0, endTargetMag = (curToEndMag * curToTargetMag);
+		if (endTargetMag > epsilon) {
+			cosRotAng = (curToEnd.x * curToTarget.x + curToEnd.y * curToTarget.y) / endTargetMag;
+			sinRotAng = (curToEnd.x * curToTarget.y - curToEnd.y * curToTarget.y) / endTargetMag;
 		}
 
 		// Clamp the cosine into range when computing the angle (might be out of range
@@ -422,18 +421,16 @@ static VectorResult calcCCD(
 			rotAng = -rotAng;
 
 		// Rotate the end effector position.
-		endX = worldBones[boneIdx].x + cosRotAng * curToEndX - sinRotAng * curToEndY;
-		endY = worldBones[boneIdx].y + sinRotAng * curToEndX + cosRotAng * curToEndY;
+		endPos.x = worldBones[boneIdx].x + cosRotAng * curToEnd.x - sinRotAng * curToEnd.y;
+		endPos.y = worldBones[boneIdx].y + sinRotAng * curToEnd.x + cosRotAng * curToEnd.y;
 
 		// Rotate the current bone in local space (this value is output to the user)
 		bones[boneIdx].angle = simplifyAngle(bones[boneIdx].angle + rotAng);
-		std::cout << "Angle:" << radToDeg(bones[boneIdx].angle) << std::endl;
 
 		// Check for termination
-		float endToTargetX = (targetX - endX);
-		float endToTargetY = (targetY - endY);
-		if (endToTargetX * endToTargetX + endToTargetY * endToTargetY <= arrivalDistSqr) {
-			return VectorResult(Result::Success, bones);
+		glm::vec2 endToTarget = target - endPos;
+		if (std::pow(endToTarget.x, 2) + std::pow(endToTarget.y, 2) <= arrivalDistSqr) {
+			return CCDResult(Result::Success, bones);
 		}
 
 		// Track if the arc length that we moved the end effector was
@@ -444,9 +441,9 @@ static VectorResult calcCCD(
 
 	// We failed to find a valid solution during this iteration.
 	if (modifiedBones)
-		return VectorResult(Result::Processing, bones);
+		return CCDResult(Result::Processing, bones);
 	else
-		return VectorResult(Result::Failure);
+		return CCDResult(Result::Failure);
 }
 
 glm::vec2 rotateVector(Bone bone) {
